@@ -3,6 +3,10 @@ import data from "./data.js";
 import express from "express";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import 'dotenv/config';
+import auth from "./middleware/auth.js";
 const app = express();
 
 
@@ -18,7 +22,7 @@ const mongoDB = "mongodb://localhost/stockDB";
 mongoose.connect(mongoDB, { useNewUrlParser: true });
 
 // Set up the schema for mongoose
-const loginSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema({
     email: String,
     password: String,
     token: String 
@@ -40,7 +44,7 @@ const stockSchema = new mongoose.Schema({
 });
 
 // Initalize the model
-const login = new mongoose.model('Login', loginSchema);
+const User = new mongoose.model('User', userSchema);
 const stock = new mongoose.model('Stock', stockSchema);
 
 
@@ -58,18 +62,114 @@ const stock = new mongoose.model('Stock', stockSchema);
 
 
 //Routes to handle the homepage which is the login page
-app.route("/")
-
-.get(function(req, res) {
-    res.render("home");
+app.get("/login", function (req, res) {
+    res.render("login");
 });
+
+// ...
+
+app.post("/login", async (req, res) => {
+
+    // Our login logic starts here
+    try {
+      // Get user input
+      const { email, password } = req.body;
+  
+      // Validate user input
+      if (!(email && password)) {
+        res.status(400).send("All input is required");
+      }
+      // Validate if user exist in our database
+      const user = await User.findOne({ email });
+  
+      if (user && (await bcrypt.compare(password, user.password))) {
+        // Create token
+        const token = jwt.sign(
+          { user_id: user._id, email },
+          process.env.TOKEN_KEY,
+          {
+            expiresIn: "2h",
+          }
+        );
+  
+        // save user token
+        user.token = token;
+  
+        // user
+        res.status(200).json(user);
+      }
+      res.status(400).send("Invalid Credentials");
+    } catch (err) {
+      console.log(err);
+    }
+    // Our login logic ends here
+  });
+  
+  // ...
 
 app.get("/register", function(req, res) {
     res.render("register");
 });
 
-app.get('/search', function(req, res) {
-    res.render('search');
+
+app.post("/register", async (req, res) => {
+
+    // Our register logic starts here
+    try {
+      // Get user input
+      const { email, password } = req.body;
+  
+      // Validate user input
+      if (!(email && password )) {
+        res.status(400).send("All input is required");
+      }
+  
+      // check if user already exist
+      // Validate if user exist in our database
+      const oldUser = await User.findOne({ email });
+  
+      if (oldUser) {
+        return res.status(409).send("User Already Exist. Please Login");
+      }
+  
+      //Encrypt user password
+      const encryptedPassword = await bcrypt.hash(password, 10);
+  
+      // Create user in our database
+      const user = await User.create({
+        email: email.toLowerCase(), // sanitize: convert email to lowercase
+        password: encryptedPassword,
+      });
+  
+      // Create token
+      const token = jwt.sign(
+        { user_id: user._id, email },
+        process.env.TOKEN_KEY,
+        {
+          expiresIn: "2h",
+        }
+      );
+      // save user token
+      user.token = token;
+  
+      // return new user
+      res.status(201).json(user);
+    } catch (err) {
+      console.log(err);
+    }
+    // Our register logic ends here
+  });
+  
+  // ...
+  
+
+app.get("/welcome", auth, (req, res) => {
+  res.status(200).send("Welcome 🙌 ");
+});
+
+
+app.get('/search/:searchkey', function(req, res) {
+    res.send('searching for ' + req.params.searchkey);
 });
 
 //Listeninig to the port 3000
