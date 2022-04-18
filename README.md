@@ -13,3 +13,7 @@ Push data to mongo db
 
 Front end for displaying search stock,
 Drop down API
+
+## Implemented App in Heroku
+https://aqueous-woodland-55311.herokuapp.com/
+
