@@ -66,11 +66,9 @@ app.get("/login", function (req, res) {
     res.render("login");
 });
 
-// ...
-
 app.post("/login", async (req, res) => {
 
-    // Our login logic starts here
+    
     try {
       // Get user input
       const { email, password } = req.body;
@@ -97,15 +95,14 @@ app.post("/login", async (req, res) => {
   
         // user
         res.status(200).json(user);
-      }
-      res.status(400).send("Invalid Credentials");
+      }else{
+        res.status(400).send("Invalid Credentials");
+      } 
     } catch (err) {
       console.log(err);
     }
     // Our login logic ends here
   });
-  
-  // ...
 
 app.get("/register", function(req, res) {
     res.render("register");
@@ -114,7 +111,6 @@ app.get("/register", function(req, res) {
 
 app.post("/register", async (req, res) => {
 
-    // Our register logic starts here
     try {
       // Get user input
       const { email, password } = req.body;
@@ -157,19 +153,25 @@ app.post("/register", async (req, res) => {
     } catch (err) {
       console.log(err);
     }
-    // Our register logic ends here
+    
   });
   
-  // ...
+
   
 
 app.get("/welcome", auth, (req, res) => {
   res.status(200).send("Welcome 🙌 ");
 });
 
-
-app.get('/search/:searchkey', function(req, res) {
-    res.send('searching for ' + req.params.searchkey);
+  
+app.post('/search/:searchkey', auth, (req, res) => {
+    stock.findOne({ name: req.params.searchkey }, function (err, foundStock){
+        if (!foundStock) {
+            res.status(403).send("Stock Not Found");
+        }else{
+            res.status(200).json(foundStock);
+        }
+    });
 });
 
 //Listeninig to the port 3000
